@@ -46,6 +46,22 @@ router
         }
     });
 
+// Endpoint to delete ALL assignments (dangerous: use with care)
+router.delete('/', async (req, res) => {
+    try {
+        const result = await Assignment.deleteMany({});
+        res.json({
+            message: 'Tous les assignments ont été supprimés',
+            deletedCount: result.deletedCount,
+        });
+    } catch (err) {
+        res.status(500).json({
+            message: 'Erreur lors de la suppression de tous les assignments',
+            error: err.message,
+        });
+    }
+});
+
 router.get('/stats', async (req, res) => {
     try {
         const all = await Assignment.find();
