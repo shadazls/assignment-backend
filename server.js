@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { connect } from 'mongoose';
 import assignmentsRoutes from './routes/assignments.js';
+import authRoutes from './routes/auth.js';
 
 const app = express();
 const port = 8010;
@@ -13,6 +14,7 @@ const uri =
 app.use(express.json());
 app.use(cors());
 app.use('/api/assignments', assignmentsRoutes);
+app.use('/api/auth', authRoutes);
 
 connect(uri)
     .then(() => {

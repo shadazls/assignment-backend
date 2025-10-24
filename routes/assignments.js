@@ -1,5 +1,9 @@
 import { Router } from 'express';
+import { authenticateToken } from '../middleware/auth.js';
 import Assignment from '../model/assignments.js';
+
+// Note: we protect destructive endpoints (delete all / delete one) with JWT auth;
+// here we require a valid token and expect role checking to be done in middleware or here.
 
 const router = Router();
 
@@ -47,8 +51,12 @@ router
     });
 
 // Endpoint to delete ALL assignments (dangerous: use with care)
-router.delete('/', async (req, res) => {
+// Protect delete-all: only admin allowed
+router.delete('/', authenticateToken, async (req, res) => {
     try {
+        const user = req.user || {};
+        if (user.role !== 'admin')
+            return res.status(403).json({ message: 'Accès refusé' });
         const result = await Assignment.deleteMany({});
         res.json({
             message: 'Tous les assignments ont été supprimés',
@@ -125,8 +133,12 @@ router
             });
         }
     })
-    .delete(async (req, res) => {
+    .delete(authenticateToken, async (req, res) => {
         try {
+            const user = req.user || {};
+            // allow admin or professeur to delete
+            if (user.role !== 'admin' && user.role !== 'professeur')
+                return res.status(403).json({ message: 'Accès refusé' });
             const result = await Assignment.deleteOne({ id: req.params.id });
             if (result.deletedCount === 0)
                 return res
