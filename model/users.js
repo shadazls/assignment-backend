@@ -3,10 +3,11 @@ import mongoose from 'mongoose';
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     passwordHash: { type: String, required: true },
+    // include 'utilisateur' as a generic default role per request
     role: {
         type: String,
-        enum: ['admin', 'professeur', 'eleve'],
-        default: 'eleve',
+        enum: ['admin', 'professeur', 'eleve', 'utilisateur'],
+        default: 'utilisateur',
     },
     nom: { type: String },
     classe: { type: String }, // optional: for eleve

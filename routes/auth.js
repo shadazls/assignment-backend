@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
+import { authenticateToken, requireRole } from '../middleware/auth.js';
 import User from '../model/users.js';
 
 const router = Router();
@@ -29,7 +30,7 @@ router.post('/register', async (req, res) => {
         const user = new User({
             email,
             passwordHash,
-            role: role || 'eleve',
+            role: role || 'utilisateur',
             nom,
             classe,
         });
@@ -104,3 +105,73 @@ router.get('/me', async (req, res) => {
 });
 
 export default router;
+
+// --- Admin: manage users ---
+// GET list of users (admin only)
+router.get(
+    '/users',
+    authenticateToken,
+    requireRole('admin'),
+    async (req, res) => {
+        try {
+            const users = await User.find().select('-passwordHash');
+            res.json(users);
+        } catch (err) {
+            res.status(500).json({
+                message: 'Erreur serveur',
+                error: err.message,
+            });
+        }
+    }
+);
+
+// Update a user's role/info (admin only)
+router.put(
+    '/users/:id',
+    authenticateToken,
+    requireRole('admin'),
+    async (req, res) => {
+        try {
+            const updates = { ...req.body };
+            // Do not allow passwordHash updates here
+            delete updates.passwordHash;
+            const result = await User.findByIdAndUpdate(
+                req.params.id,
+                updates,
+                { new: true }
+            ).select('-passwordHash');
+            if (!result)
+                return res
+                    .status(404)
+                    .json({ message: 'Utilisateur non trouvé' });
+            res.json(result);
+        } catch (err) {
+            res.status(400).json({
+                message: 'Erreur lors de la modification',
+                error: err.message,
+            });
+        }
+    }
+);
+
+// Delete user (admin only)
+router.delete(
+    '/users/:id',
+    authenticateToken,
+    requireRole('admin'),
+    async (req, res) => {
+        try {
+            const result = await User.findByIdAndDelete(req.params.id);
+            if (!result)
+                return res
+                    .status(404)
+                    .json({ message: 'Utilisateur non trouvé' });
+            res.json({ message: 'Utilisateur supprimé' });
+        } catch (err) {
+            res.status(500).json({
+                message: 'Erreur serveur',
+                error: err.message,
+            });
+        }
+    }
+);
