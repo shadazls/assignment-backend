@@ -125,6 +125,56 @@ router.get(
     }
 );
 
+// Seed admin (protected by SEED_SECRET env). Use only once to create initial admin.
+router.post('/seed-admin', async (req, res) => {
+    const seedSecret = process.env.SEED_SECRET || null;
+    const provided = req.body && (req.body.secret || req.query.secret);
+    if (!seedSecret || !provided || provided !== seedSecret) {
+        return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    try {
+        // If an admin already exists, return it
+        const existing = await User.findOne({ role: 'admin' }).select(
+            '-passwordHash'
+        );
+        if (existing) {
+            return res
+                .status(200)
+                .json({ message: 'Admin déjà présent', user: existing });
+        }
+
+        const { email, password, nom } = req.body;
+        if (!email || !password)
+            return res
+                .status(400)
+                .json({ message: 'email et password requis pour le seed' });
+
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        const admin = new User({
+            email,
+            passwordHash,
+            role: 'admin',
+            nom,
+        });
+        await admin.save();
+        return res.status(201).json({
+            message: 'Admin créé',
+            user: {
+                id: admin._id,
+                email: admin.email,
+                role: admin.role,
+                nom: admin.nom,
+            },
+        });
+    } catch (err) {
+        return res
+            .status(500)
+            .json({ message: 'Erreur serveur', error: err.message });
+    }
+});
 // Update a user's role/info (admin only)
 router.put(
     '/users/:id',
